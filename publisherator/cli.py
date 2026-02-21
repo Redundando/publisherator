@@ -58,9 +58,9 @@ def main():
         )
         
         if args.dry_run:
-            print(f"\n✓ Would publish version {new_version}")
+            print(f"\nWould publish version {new_version}")
         else:
-            print(f"\n✓ Successfully published version {new_version}")
+            print(f"\nSuccessfully published version {new_version}")
         
         sys.exit(0)
         
