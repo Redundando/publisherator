@@ -78,6 +78,7 @@ class Publisher:
     @Logger()
     def check_git_clean(self):
         """Ensure git working directory is clean"""
+        Logger.note("Checking git status...")
         result = subprocess.run(
             ["git", "status", "--porcelain"],
             cwd=self.package_dir,
@@ -89,6 +90,8 @@ class Publisher:
         
         if result.stdout.strip():
             raise PublishError("Git working directory is not clean. Commit or stash changes first.")
+        
+        Logger.note("Git status is clean")
     
     @Logger()
     def git_commit_and_tag(self, version: str, commit_msg: str = None):
@@ -128,6 +131,7 @@ class Publisher:
     @Logger()
     def check_git_remote(self):
         """Check if git remote 'origin' exists"""
+        Logger.note("Checking git remote...")
         result = subprocess.run(
             ["git", "remote", "get-url", "origin"],
             cwd=self.package_dir,
@@ -139,10 +143,15 @@ class Publisher:
                 "No git remote 'origin' configured. "
                 "Set it up with: git remote add origin <url>"
             )
+        
+        remote_url = result.stdout.strip()
+        Logger.note(f"Remote configured: {remote_url}")
+        return remote_url
     
     @Logger()
     def git_push(self):
         """Push commits and tags to origin"""
+        Logger.note("Pushing to remote...")
         # Push commits (with --set-upstream for first push)
         result = subprocess.run(
             ["git", "push", "-u", "origin", "HEAD"],
@@ -155,6 +164,7 @@ class Publisher:
         
         Logger.note("Pushed commits")
         
+        Logger.note("Pushing tags...")
         # Push tags
         result = subprocess.run(
             ["git", "push", "origin", "--tags"],
@@ -178,6 +188,7 @@ class Publisher:
     @Logger()
     def build_package(self):
         """Build the package using python -m build"""
+        Logger.note("Building package (this may take a moment)...")
         result = subprocess.run(
             ["python", "-m", "build"],
             cwd=self.package_dir,
@@ -187,11 +198,12 @@ class Publisher:
         if result.returncode != 0:
             raise PublishError(f"Build failed: {result.stderr}")
         
-        Logger.note("Package built")
+        Logger.note("Package built successfully")
     
     @Logger()
     def upload_to_pypi(self):
         """Upload package to PyPI using twine"""
+        Logger.note("Uploading to PyPI...")
         result = subprocess.run(
             ["twine", "upload", "dist/*"],
             cwd=self.package_dir,
@@ -201,7 +213,7 @@ class Publisher:
         if result.returncode != 0:
             raise PublishError(f"PyPI upload failed: {result.stderr}")
         
-        Logger.note("Uploaded to PyPI")
+        Logger.note("Uploaded to PyPI successfully")
     
     @Logger()
     def rollback_git(self, version: str):
@@ -266,6 +278,20 @@ class Publisher:
                     raise PublishError(f"PyPI upload failed: {e}")
             
             Logger.note(f"Published {self.package_name} {new_version}")
+            
+            # Print summary
+            if not skip_git:
+                remote_url = subprocess.run(
+                    ["git", "remote", "get-url", "origin"],
+                    cwd=self.package_dir,
+                    capture_output=True,
+                    text=True
+                ).stdout.strip()
+                Logger.note(f"GitHub: {remote_url}")
+            
+            if not skip_pypi:
+                Logger.note(f"PyPI: https://pypi.org/project/{self.package_name}/{new_version}/")
+            
             return new_version
             
         except subprocess.CalledProcessError as e:
