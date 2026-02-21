@@ -213,17 +213,17 @@ class Publisher:
             bufsize=1
         )
         
-        output_lines = []
         warnings = []
+        seen_warnings = set()
         
         for line in process.stdout:
             line = line.rstrip()
-            output_lines.append(line)
             print(line)
             
-            # Collect warnings
-            if "warning" in line.lower() or "warn" in line.lower():
+            # Collect unique warnings (case-insensitive check for Warning or DeprecationWarning)
+            if ("Warning:" in line or "DeprecationWarning:" in line) and line not in seen_warnings:
                 warnings.append(line)
+                seen_warnings.add(line)
         
         process.wait()
         if process.returncode != 0:
