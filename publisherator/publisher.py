@@ -254,7 +254,10 @@ class Publisher:
         )
         
         for line in process.stdout:
-            print(line.rstrip())
+            line = line.rstrip()
+            # Skip progress bar lines (contain % and progress indicators)
+            if not ("% " in line and "---" in line):
+                print(line)
         
         process.wait()
         if process.returncode != 0:
