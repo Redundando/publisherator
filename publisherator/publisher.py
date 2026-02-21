@@ -199,7 +199,7 @@ class Publisher:
             
             # Version bump
             new_version = self.bump_version(bump_type)
-            Logger.note(f"Version: {self.get_current_version()} → {new_version}")
+            Logger.note(f"Version: {self.get_current_version()} -> {new_version}")
             
             if dry_run:
                 Logger.note("DRY RUN - No changes made")
