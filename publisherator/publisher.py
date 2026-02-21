@@ -2,6 +2,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 from logorator import Logger
 
@@ -205,7 +206,7 @@ class Publisher:
         Logger.note("Building package (this may take a moment)...")
         
         process = subprocess.Popen(
-            ["python", "-m", "build"],
+            [sys.executable, "-m", "build"],
             cwd=self.package_dir,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
