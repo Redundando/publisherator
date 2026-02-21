@@ -1,0 +1,10 @@
+pyproject.toml
+publisherator/__init__.py
+publisherator/cli.py
+publisherator/publisher.py
+publisherator.egg-info/PKG-INFO
+publisherator.egg-info/SOURCES.txt
+publisherator.egg-info/dependency_links.txt
+publisherator.egg-info/entry_points.txt
+publisherator.egg-info/requires.txt
+publisherator.egg-info/top_level.txt
