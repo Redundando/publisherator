@@ -1,2 +1,0 @@
-[console_scripts]
-publisherator = publisherator.cli:main
