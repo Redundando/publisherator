@@ -1,1 +1,4 @@
 logorator
+build
+twine
+pytest

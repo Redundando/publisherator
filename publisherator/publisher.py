@@ -126,11 +126,26 @@ class Publisher:
         Logger.note(f"Tagged: {version}")
     
     @Logger()
+    def check_git_remote(self):
+        """Check if git remote 'origin' exists"""
+        result = subprocess.run(
+            ["git", "remote", "get-url", "origin"],
+            cwd=self.package_dir,
+            capture_output=True,
+            text=True
+        )
+        if result.returncode != 0:
+            raise PublishError(
+                "No git remote 'origin' configured. "
+                "Set it up with: git remote add origin <url>"
+            )
+    
+    @Logger()
     def git_push(self):
         """Push commits and tags to origin"""
-        # Push commits
+        # Push commits (with --set-upstream for first push)
         result = subprocess.run(
-            ["git", "push", "origin"],
+            ["git", "push", "-u", "origin", "HEAD"],
             cwd=self.package_dir,
             capture_output=True,
             text=True
@@ -189,13 +204,30 @@ class Publisher:
         Logger.note("Uploaded to PyPI")
     
     @Logger()
+    def rollback_git(self, version: str):
+        """Rollback git commit and tag if push fails"""
+        Logger.note("Rolling back git changes...")
+        
+        # Delete tag
+        subprocess.run(["git", "tag", "-d", version], cwd=self.package_dir, capture_output=True)
+        
+        # Reset commit
+        subprocess.run(["git", "reset", "--hard", "HEAD~1"], cwd=self.package_dir, capture_output=True)
+        
+        Logger.note("Rollback complete")
+    
+    @Logger()
     def publish(self, bump_type: str, commit_msg: str = None, skip_git: bool = False, 
                 skip_pypi: bool = False, dry_run: bool = False):
         """Execute full publishing workflow"""
+        committed = False
+        new_version = None
+        
         try:
             # Pre-flight checks
             if not skip_git:
                 self.check_git_clean()
+                self.check_git_remote()
             
             # Version bump
             new_version = self.bump_version(bump_type)
@@ -210,18 +242,35 @@ class Publisher:
             # Git operations
             if not skip_git:
                 self.git_commit_and_tag(new_version, commit_msg)
-                self.git_push()
+                committed = True
+                
+                try:
+                    self.git_push()
+                except PublishError as e:
+                    Logger.note("Git push failed, rolling back...")
+                    self.rollback_git(new_version)
+                    raise PublishError(f"Git push failed: {e}. Changes rolled back.")
             
             # Build and publish
             if not skip_pypi:
                 self.clean_dist()
                 self.build_package()
-                self.upload_to_pypi()
+                
+                try:
+                    self.upload_to_pypi()
+                except PublishError as e:
+                    if committed and not skip_git:
+                        Logger.note("PyPI upload failed. Git changes were pushed.")
+                        Logger.note(f"To retry: twine upload dist/*")
+                        Logger.note(f"To rollback: git reset --hard HEAD~1 && git tag -d {new_version} && git push origin --delete {new_version}")
+                    raise PublishError(f"PyPI upload failed: {e}")
             
-            Logger.note(f"✓ Published {self.package_name} {new_version}")
+            Logger.note(f"Published {self.package_name} {new_version}")
             return new_version
             
         except subprocess.CalledProcessError as e:
             raise PublishError(f"Command failed: {e.stderr if hasattr(e, 'stderr') else str(e)}")
+        except PublishError:
+            raise
         except Exception as e:
             raise PublishError(str(e))
