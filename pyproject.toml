@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "publisherator"
-version = "0.1.3"
+version = "0.1.4"
 description = "One-command Python package publishing: bump version, commit, tag, push to GitHub, build, and upload to PyPI"
 authors = [{name = "Arved Klöhn"}]
 license = "MIT"
