@@ -153,27 +153,41 @@ class Publisher:
         """Push commits and tags to origin"""
         Logger.note("Pushing to remote...")
         # Push commits (with --set-upstream for first push)
-        result = subprocess.run(
+        process = subprocess.Popen(
             ["git", "push", "-u", "origin", "HEAD"],
             cwd=self.package_dir,
-            capture_output=True,
-            text=True
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1
         )
-        if result.returncode != 0:
-            raise PublishError(f"Git push failed: {result.stderr}")
+        
+        for line in process.stdout:
+            print(line.rstrip())
+        
+        process.wait()
+        if process.returncode != 0:
+            raise PublishError("Git push failed")
         
         Logger.note("Pushed commits")
         
         Logger.note("Pushing tags...")
         # Push tags
-        result = subprocess.run(
+        process = subprocess.Popen(
             ["git", "push", "origin", "--tags"],
             cwd=self.package_dir,
-            capture_output=True,
-            text=True
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1
         )
-        if result.returncode != 0:
-            raise PublishError(f"Git push tags failed: {result.stderr}")
+        
+        for line in process.stdout:
+            print(line.rstrip())
+        
+        process.wait()
+        if process.returncode != 0:
+            raise PublishError("Git push tags failed")
         
         Logger.note("Pushed tags")
     
@@ -189,29 +203,62 @@ class Publisher:
     def build_package(self):
         """Build the package using python -m build"""
         Logger.note("Building package (this may take a moment)...")
-        result = subprocess.run(
+        
+        process = subprocess.Popen(
             ["python", "-m", "build"],
             cwd=self.package_dir,
-            capture_output=True,
-            text=True
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1
         )
-        if result.returncode != 0:
-            raise PublishError(f"Build failed: {result.stderr}")
+        
+        output_lines = []
+        warnings = []
+        
+        for line in process.stdout:
+            line = line.rstrip()
+            output_lines.append(line)
+            print(line)
+            
+            # Collect warnings
+            if "warning" in line.lower() or "warn" in line.lower():
+                warnings.append(line)
+        
+        process.wait()
+        if process.returncode != 0:
+            raise PublishError("Build failed")
         
         Logger.note("Package built successfully")
+        
+        # Display warnings summary
+        if warnings:
+            Logger.note(f"Build completed with {len(warnings)} warning(s):")
+            for warning in warnings:
+                Logger.note(f"  {warning}")
+        
+        return warnings
     
     @Logger()
     def upload_to_pypi(self):
         """Upload package to PyPI using twine"""
         Logger.note("Uploading to PyPI...")
-        result = subprocess.run(
+        
+        process = subprocess.Popen(
             ["twine", "upload", "dist/*"],
             cwd=self.package_dir,
-            capture_output=True,
-            text=True
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1
         )
-        if result.returncode != 0:
-            raise PublishError(f"PyPI upload failed: {result.stderr}")
+        
+        for line in process.stdout:
+            print(line.rstrip())
+        
+        process.wait()
+        if process.returncode != 0:
+            raise PublishError("PyPI upload failed")
         
         Logger.note("Uploaded to PyPI successfully")
     

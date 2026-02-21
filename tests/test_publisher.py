@@ -159,16 +159,26 @@ def test_publish_rollback_on_push_failure(mock_run, temp_package):
     assert any("reset" in call and "--hard" in call for call in calls)
 
 
+@patch('subprocess.Popen')
 @patch('subprocess.run')
-def test_publish_pypi_failure_with_recovery_instructions(mock_run, temp_package):
+def test_publish_pypi_failure_with_recovery_instructions(mock_run, mock_popen, temp_package):
     """Test that helpful recovery instructions are provided if PyPI upload fails"""
-    def side_effect(*args, **kwargs):
+    # Mock Popen for git push (success) and twine upload (failure)
+    def popen_side_effect(*args, **kwargs):
         cmd = args[0]
-        if "twine" in cmd:
-            return Mock(returncode=1, stdout="", stderr="upload failed")
-        return Mock(returncode=0, stdout="", stderr="")
+        mock_process = Mock()
+        mock_process.returncode = 0
+        mock_process.stdout = iter([])
+        
+        if "twine" in str(cmd):
+            mock_process.returncode = 1
+        
+        mock_process.wait = Mock(return_value=mock_process.returncode)
+        return mock_process
     
-    mock_run.side_effect = side_effect
+    mock_popen.side_effect = popen_side_effect
+    mock_run.return_value = Mock(returncode=0, stdout="", stderr="")
+    
     pub = Publisher(temp_package)
     
     with pytest.raises(PublishError, match="PyPI upload failed"):
