@@ -99,10 +99,14 @@ Your package must have:
 
 - ✓ Semantic versioning (major.minor.patch)
 - ✓ Multi-file version sync
-- ✓ Git automation with rollback on failure
+- ✓ Real-time output streaming for git push, build, and upload
+- ✓ Build warning collection and summary
+- ✓ Git automation with automatic rollback on push failure
 - ✓ Works with any git remote (GitHub, GitLab, Bitbucket, etc.)
+- ✓ Supports first-time pushes with automatic upstream tracking
 - ✓ Zero configuration needed
-- ✓ Helpful error messages
+- ✓ Helpful error messages and recovery instructions
+- ✓ Final summary with GitHub and PyPI URLs
 
 ## License
 
